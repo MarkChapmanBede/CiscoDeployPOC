@@ -1,30 +1,27 @@
 pipeline {
     agent any
     environment {
-        TF_VERSION = '1.7.4'
-    }
-    tools {
-        terraform 'Terraform'
+        PATH = "${env.PATH}:/usr/local/bin"
     }
     stages {
         stage('Initialize') {
             steps {
                 script {
-                    terraform.init()
+                    sh 'terraform init'
                 }
             }
         }
         stage('Validate') {
             steps {
                 script {
-                    terraform.validate()
+                    sh 'terraform validate'
                 }
             }
         }
         stage('Plan') {
             steps {
                 script {
-                    terraform.plan()
+                    sh 'terraform plan -out=tfplan'
                 }
             }
         }
@@ -32,7 +29,7 @@ pipeline {
             steps {
                 script {
                     input(message: "Do you want to apply the changes?", ok: "Yes")
-                    terraform.apply(autoApprove: true)
+                    sh 'terraform apply -auto-approve tfplan'
                 }
             }
         }
