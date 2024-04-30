@@ -24,19 +24,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Debug') {
-    steps {
-        script {
-            sh '''
-            echo $ARM_CLIENT_ID
-            echo $ARM_SUBSCRIPTION_ID
-            echo $ARM_TENANT_ID
-            '''
-        }
-    }
-}
-
         stage('Validate') {
             steps {
                 script {
