@@ -4,6 +4,13 @@ pipeline {
         PATH = "${env.PATH}:/usr/local/bin"
     }
     stages {
+        stage('Check Environment Variables') {
+            steps {
+                script {
+                    sh 'printenv | grep TF_VAR_ | cut -d"=" -f1'
+                }
+            }
+        }
         stage('Initialize') {
             steps {
                 script {
