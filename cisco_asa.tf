@@ -111,7 +111,7 @@ resource "azurerm_virtual_machine" "asa_vm" {
     azurerm_network_interface.asa_nic_outside.id,
     azurerm_network_interface.asa_nic_dmz.id,
   ]
-  vm_size                       = "Standard_D3_v2"
+  vm_size                       = "Standard_A4_v2"
 
   storage_os_disk {
     name              = "myosdisk"
