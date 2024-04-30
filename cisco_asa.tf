@@ -135,7 +135,7 @@ resource "azurerm_virtual_machine" "asa_vm" {
 
   os_profile {
     computer_name  = "ciscoasa"
-    admin_username = var.admin_username
+    admin_username = "azureuser"
     admin_password = var.admin_password
   }
 
