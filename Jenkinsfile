@@ -7,9 +7,11 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
+                    // Inject Azure credentials, admin credentials, and the SSH public key stored in Jenkins securely
                     withCredentials([
                         string(credentialsId: 'TF_VAR_admin_username', variable: 'TF_VAR_admin_username'),
                         string(credentialsId: 'TF_VAR_admin_password', variable: 'TF_VAR_admin_password'),
+                        string(credentialsId: 'TF_VAR_ssh_public_key', variable: 'TF_VAR_ssh_public_key'),
                         string(credentialsId: 'ARM_CLIENT_ID', variable: 'ARM_CLIENT_ID'),
                         string(credentialsId: 'ARM_CLIENT_SECRET', variable: 'ARM_CLIENT_SECRET'),
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
@@ -29,6 +31,7 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'TF_VAR_admin_username', variable: 'TF_VAR_admin_username'),
                         string(credentialsId: 'TF_VAR_admin_password', variable: 'TF_VAR_admin_password'),
+                        string(credentialsId: 'TF_VAR_ssh_public_key', variable: 'TF_VAR_ssh_public_key'),
                         string(credentialsId: 'ARM_CLIENT_ID', variable: 'ARM_CLIENT_ID'),
                         string(credentialsId: 'ARM_CLIENT_SECRET', variable: 'ARM_CLIENT_SECRET'),
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
@@ -48,6 +51,7 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'TF_VAR_admin_username', variable: 'TF_VAR_admin_username'),
                         string(credentialsId: 'TF_VAR_admin_password', variable: 'TF_VAR_admin_password'),
+                        string(credentialsId: 'TF_VAR_ssh_public_key', variable: 'TF_VAR_ssh_public_key'),
                         string(credentialsId: 'ARM_CLIENT_ID', variable: 'ARM_CLIENT_ID'),
                         string(credentialsId: 'ARM_CLIENT_SECRET', variable: 'ARM_CLIENT_SECRET'),
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
@@ -55,15 +59,10 @@ pipeline {
                     ]) {
                         sh '''
                         echo "Generating Terraform plan"
-                        terraform plan -out=tfplan
+                        terraform plan
                         '''
                     }
                 }
-            }
-        }
-        stage('Approval') {
-            steps {
-                input(message: "Review the plan and approve deployment", ok: "Deploy")
             }
         }
         stage('Apply') {
@@ -72,14 +71,16 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'TF_VAR_admin_username', variable: 'TF_VAR_admin_username'),
                         string(credentialsId: 'TF_VAR_admin_password', variable: 'TF_VAR_admin_password'),
+                        string(credentialsId: 'TF_VAR_ssh_public_key', variable: 'TF_VAR_ssh_public_key'),
                         string(credentialsId: 'ARM_CLIENT_ID', variable: 'ARM_CLIENT_ID'),
                         string(credentialsId: 'ARM_CLIENT_SECRET', variable: 'ARM_CLIENT_SECRET'),
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
                         string(credentialsId: 'ARM_SUBSCRIPTION_ID', variable: 'ARM_SUBSCRIPTION_ID')
                     ]) {
+                        input(message: "Do you want to apply the changes?", ok: "Yes")
                         sh '''
                         echo "Applying Terraform plan"
-                        terraform apply -auto-approve tfplan
+                        terraform apply
                         '''
                     }
                 }
