@@ -64,8 +64,24 @@ pipeline {
                         sh '''
                         echo "Applying Terraform plan"
                         terraform apply -auto-approve tfplan
+                        PUBLIC_IP=$(terraform output -raw vm_public_ip)
                         '''
                     }
+                }
+            }
+        }
+        stage('Ping Test') {
+            steps {
+                script {
+                    // Wait for the server to be ready
+                    sh 'sleep 120'  //  2 mins
+                    sh '''
+                    echo "Pinging VM at $PUBLIC_IP"
+                    for i in {1..5}
+                    do
+                        ping -c 1 $PUBLIC_IP && break || sleep 10
+                    done
+                    '''
                 }
             }
         }
