@@ -12,20 +12,12 @@ resource "azurerm_virtual_network" "vnet" {
   resource_group_name = azurerm_resource_group.rg.name
 }
 
-# Subnets
+# Define Subnets for each purpose
 resource "azurerm_subnet" "subnet_mgmt" {
   name                 = "mgmt"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
-}
-
-resource "azurerm_public_ip" "asa_public_ip_outside" {
-  name                = "asa-public-ip-outside"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  allocation_method   = "Dynamic"
-  domain_name_label   = "ciscovpn-westeu"
 }
 
 resource "azurerm_subnet" "subnet_inside" {
@@ -49,72 +41,53 @@ resource "azurerm_subnet" "subnet_dmz" {
   address_prefixes     = ["10.0.4.0/24"]
 }
 
-# Define Network Interfaces
-resource "azurerm_network_interface" "asa_nic_mgmt" {
-  name                = "asa-nic-mgmt"
+# Public IP for Load Balancer (if using one)
+resource "azurerm_public_ip" "asa_public_ip_outside" {
+  name                = "asa-public-ip-outside"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  domain_name_label   = "ciscovpn-westeu"
+}
+
+# Availability Set
+resource "azurerm_availability_set" "asa_av_set" {
+  name                        = "asa-availability-set"
+  location                    = azurerm_resource_group.rg.location
+  resource_group_name         = azurerm_resource_group.rg.name
+  platform_fault_domain_count = 2
+  platform_update_domain_count= 2
+  managed                     = true
+}
+
+# Create Network Interfaces for each VM and subnet
+resource "azurerm_network_interface" "asa_nic" {
+  count               = 4
+  name                = "asa-nic-${element(["mgmt", "inside", "outside", "dmz"], count.index)}-${count.index / 4}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
-    name                          = "mgmt"
-    subnet_id                     = azurerm_subnet.subnet_mgmt.id
+    name                          = "${element(["mgmt", "inside", "outside", "dmz"], count.index)}-config"
+    subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index)
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = count.index == 2 ? azurerm_public_ip.asa_public_ip_outside.id : null
   }
 }
 
-resource "azurerm_network_interface" "asa_nic_inside" {
-  name                = "asa-nic-inside"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  ip_configuration {
-    name                          = "inside"
-    subnet_id                     = azurerm_subnet.subnet_inside.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
-resource "azurerm_network_interface" "asa_nic_outside" {
-  name                = "asa-nic-outside"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  ip_configuration {
-    name                          = "outside"
-    subnet_id                     = azurerm_subnet.subnet_outside.id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.asa_public_ip_outside.id
-  }
-}
-
-resource "azurerm_network_interface" "asa_nic_dmz" {
-  name                = "asa-nic-dmz"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  ip_configuration {
-    name                          = "dmz"
-    subnet_id                     = azurerm_subnet.subnet_dmz.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
-# Create the Cisco ASA VM
+# Virtual Machines
 resource "azurerm_virtual_machine" "asa_vm" {
-  name                          = "ciscovpn"
+  count                         = 1
+  name                          = "ciscovpn-${count.index}"
   location                      = azurerm_resource_group.rg.location
   resource_group_name           = azurerm_resource_group.rg.name
-  primary_network_interface_id  = azurerm_network_interface.asa_nic_outside.id
-  network_interface_ids = [
-    azurerm_network_interface.asa_nic_mgmt.id,
-    azurerm_network_interface.asa_nic_inside.id,
-    azurerm_network_interface.asa_nic_outside.id,
-    azurerm_network_interface.asa_nic_dmz.id,
-  ]
+  network_interface_ids         = slice(azurerm_network_interface.asa_nic.*.id, count.index * 4, count.index * 4 + 4)
   vm_size                       = "Standard_A4_v2"
+  availability_set_id           = azurerm_availability_set.asa_av_set.id
+  delete_os_disk_on_termination = true
 
   storage_os_disk {
-    name              = "myosdisk"
+    name              = "myosdisk-${count.index}"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
@@ -127,14 +100,8 @@ resource "azurerm_virtual_machine" "asa_vm" {
     version   = "latest"
   }
 
-  plan {
-    publisher = "cisco"
-    product   = "cisco-asav"
-    name      = "asav-azure-byol"
-  }
-
   os_profile {
-    computer_name  = "ciscoasa"
+    computer_name  = "ciscoasa-${count.index}"
     admin_username = "azureuser"
     admin_password = var.admin_password
   }
