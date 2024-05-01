@@ -12,7 +12,7 @@ resource "azurerm_virtual_network" "vnet" {
   resource_group_name = azurerm_resource_group.rg.name
 }
 
-# Define Subnets for each purpose
+# Subnets
 resource "azurerm_subnet" "subnet_mgmt" {
   name                 = "mgmt"
   resource_group_name  = azurerm_resource_group.rg.name
@@ -60,28 +60,29 @@ resource "azurerm_availability_set" "asa_av_set" {
   managed                     = true
 }
 
-# Create Network Interfaces for each VM and subnet
+# Network Interfaces
 resource "azurerm_network_interface" "asa_nic" {
   count               = 4
-  name                = "asa-nic-${element(["mgmt", "inside", "outside", "dmz"], count.index)}-${count.index / 4}"
+  name                = "asa-nic-${element(["mgmt", "inside", "outside", "dmz"], count.index % 4)}-${count.index / 4}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
-    name                          = "${element(["mgmt", "inside", "outside", "dmz"], count.index)}-config"
-    subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index)
+    name                          = "${element(["mgmt", "inside", "outside", "dmz"], count.index % 4)}-config-${count.index / 4}"
+    subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index % 4)
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = count.index == 2 ? azurerm_public_ip.asa_public_ip_outside.id : null
+    public_ip_address_id          = (count.index % 4 == 2) ? azurerm_public_ip.asa_public_ip_outside.id : null
+    primary                       = (count.index % 4 == 0)  # Make the management interface primary
   }
 }
 
 # Virtual Machines
 resource "azurerm_virtual_machine" "asa_vm" {
-  count                         = 1
+  count                         = 1  # Adjust the count to scale up VM instances
   name                          = "ciscovpn-${count.index}"
   location                      = azurerm_resource_group.rg.location
   resource_group_name           = azurerm_resource_group.rg.name
-  network_interface_ids         = slice(azurerm_network_interface.asa_nic.*.id, count.index * 4, count.index * 4 + 4)
+  network_interface_ids         = slice(azurerm_network_interface.asa_nic.*.id, count.index * 4, (count.index + 1) * 4)
   vm_size                       = "Standard_A4_v2"
   availability_set_id           = azurerm_availability_set.asa_av_set.id
   delete_os_disk_on_termination = true
