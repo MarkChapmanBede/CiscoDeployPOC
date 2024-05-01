@@ -67,7 +67,8 @@ pipeline {
                         script {
                             env.PUBLIC_IPS_JSON = sh(script: 'terraform output -json asa_vm_public_ips', returnStdout: true).trim()
                             echo "Debug: JSON Output - ${env.PUBLIC_IPS_JSON}"
-                            env.PUBLIC_IPS = env.PUBLIC_IPS_JSON.replaceAll("\\[|\\]|\"", "").split(",")
+                            def ips = readJSON(text: env.PUBLIC_IPS_JSON)
+                            env.PUBLIC_IPS = ips.join(",")
                             echo "Debug: IPs - ${env.PUBLIC_IPS}"
                         }
                     }
@@ -80,12 +81,9 @@ pipeline {
                 script {
                     sh 'sleep 120'  // 2 mins
                     echo "Pinging IPs: ${env.PUBLIC_IPS}"
-                    env.PUBLIC_IPS.each { ip ->
+                    env.PUBLIC_IPS.split(',').each { ip ->
                         echo "About to ping IP: $ip"
-                        sh """
-                        echo 'Pinging VM at $ip'
-                        ping -c 1 $ip || echo 'Ping failed for IP $ip'
-                        """
+                        sh "echo 'Pinging VM at $ip' && ping -c 1 $ip || echo 'Ping failed for IP $ip'"
                     }
                 }
             }
