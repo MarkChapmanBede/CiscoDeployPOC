@@ -61,8 +61,9 @@ pipeline {
                         sh 'terraform apply -auto-approve tfplan'
                         sh 'echo "Waiting for 30 seconds before refreshing state to capture Public IP..."'
                         sh 'sleep 30'
-                        env.PUBLIC_IPS = sh(script: 'terraform output -raw asa_vm_public_ips', returnStdout: true).trim()
-                        sh 'echo "VM Public IPs: $PUBLIC_IPS"'
+                        env.PUBLIC_IPS_JSON = sh(script: 'terraform output -json asa_vm_public_ips', returnStdout: true).trim()
+                        env.PUBLIC_IPS = readJSON text: env.PUBLIC_IPS_JSON
+                        sh 'echo "VM Public IPs: ${env.PUBLIC_IPS.join(\', \')}"'
                     }
                 }
             }
@@ -71,10 +72,8 @@ pipeline {
             steps {
                 script {
                     sh 'sleep 120'  // 2 mins
-                    // Split the list of IPs and iterate over them
-                    def publicIPs = env.PUBLIC_IPS.split("\\n")
-                    for (int i = 0; i < publicIPs.size(); i++) {
-                        def ip = publicIPs[i].trim()
+                    // Iterate over each IP address and perform ping test
+                    env.PUBLIC_IPS.each { ip ->
                         sh """
                         echo "Pinging VM at $ip"
                         for (int j = 1; j <= 5; j++) {
