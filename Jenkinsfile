@@ -1,8 +1,8 @@
 pipeline {
     agent any
     environment {
-        PATH = "${env.PATH}:/usr/local/bin"  // Assuming Terraform is installed here
-        PUBLIC_IP = ''  // Define PUBLIC_IP at the pipeline level to ensure availability across stages
+        PATH = "${env.PATH}:/usr/local/bin"
+        PUBLIC_IP = ''  // Define PUBLIC_IP 
     }
     stages {
         stage('Initialize') {
@@ -78,8 +78,7 @@ pipeline {
         stage('Ping Test') {
             steps {
                 script {
-                    // Wait for the server to be ready
-                    sh 'sleep 120'  // Wait for 2 minutes
+                    sh 'sleep 120'  // 2 mins
                     sh '''
                     echo "Pinging VM at $PUBLIC_IP"
                     for i in {1..5}
