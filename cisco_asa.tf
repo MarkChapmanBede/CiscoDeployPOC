@@ -1,3 +1,7 @@
+variable "vm_count" {
+  default = 1
+}
+
 # Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = "Cisco-Test-VPN-TF-Managed"
@@ -60,23 +64,19 @@ resource "azurerm_availability_set" "asa_av_set" {
   managed                     = true
 }
 
-# Network Interfaces for each subnet
+# Network Interfaces
 resource "azurerm_network_interface" "asa_nic" {
-  count               = 4 * var.vm_count
+  count               = var.vm_count * 4 # Four NICs per VM
   name                = "asa-nic-${element(["mgmt", "inside", "outside", "dmz"], count.index % 4)}-vm${floor(count.index / 4)}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
     name                          = "ipconfig-${count.index}"
-    subnet_id                     = element([
-      azurerm_subnet.subnet_mgmt.id, 
-      azurerm_subnet.subnet_inside.id, 
-      azurerm_subnet.subnet_outside.id, 
-      azurerm_subnet.subnet_dmz.id], count.index % 4)
+    subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index % 4)
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = (count.index % 4 == 2) ? azurerm_public_ip.asa_public_ip_outside.id : null
-    primary                       = (count.index % 4 == 2) # Explicitly set primary for 'outside' interface
+    primary                       = (count.index % 4 == 2) # Set primary network interface explicitly
   }
 }
 
@@ -86,14 +86,9 @@ resource "azurerm_virtual_machine" "asa_vm" {
   name                          = "ciscovpn-${count.index}"
   location                      = azurerm_resource_group.rg.location
   resource_group_name           = azurerm_resource_group.rg.name
-  network_interface_ids         = slice([
-    azurerm_network_interface.asa_nic.*.id[count.index * 4], # Management
-    azurerm_network_interface.asa_nic.*.id[count.index * 4 + 1], # Inside
-    azurerm_network_interface.asa_nic.*.id[count.index * 4 + 2], # Outside
-    azurerm_network_interface.asa_nic.*.id[count.index * 4 + 3]  # DMZ
-  ], 0, 4)
-  vm_size                       = "Standard_A4_v2"
   availability_set_id           = azurerm_availability_set.asa_av_set.id
+  network_interface_ids         = [element(azurerm_network_interface.asa_nic.*.id, count.index * 4 + 2)] # Explicitly using the outside NIC as primary
+  vm_size                       = "Standard_A4_v2"
   delete_os_disk_on_termination = true
 
   storage_os_disk {
