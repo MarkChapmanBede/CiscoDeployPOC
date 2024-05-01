@@ -16,10 +16,8 @@ pipeline {
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
                         string(credentialsId: 'ARM_SUBSCRIPTION_ID', variable: 'ARM_SUBSCRIPTION_ID')
                     ]) {
-                        sh '''
-                        echo "Initializing Terraform"
-                        terraform init
-                        '''
+                        sh 'echo "Initializing Terraform"'
+                        sh 'terraform init'
                     }
                 }
             }
@@ -36,10 +34,8 @@ pipeline {
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
                         string(credentialsId: 'ARM_SUBSCRIPTION_ID', variable: 'ARM_SUBSCRIPTION_ID')
                     ]) {
-                        sh '''
-                        echo "Generating Terraform plan"
-                        terraform plan -out=tfplan
-                        '''
+                        sh 'echo "Generating Terraform plan"'
+                        sh 'terraform plan -out=tfplan'
                     }
                 }
             }
@@ -61,14 +57,12 @@ pipeline {
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
                         string(credentialsId: 'ARM_SUBSCRIPTION_ID', variable: 'ARM_SUBSCRIPTION_ID')
                     ]) {
-                        PUBLIC_IP = sh(script: """
-                        terraform apply -auto-approve tfplan
-                        echo "Waiting for 30 seconds before refreshing state to capture Public IP..."
-                        sleep 30
-                        terraform refresh
-                        terraform output -raw asa_vm_public_ip
-                        """, returnStdout: true).trim()
-                        echo "VM Public IP: ${env.PUBLIC_IP}"
+                        sh 'echo "Applying Terraform plan"'
+                        sh 'terraform apply -auto-approve tfplan'
+                        sh 'echo "Waiting for 30 seconds before refreshing state to capture Public IP..."'
+                        sh 'sleep 30'
+                        env.PUBLIC_IP = sh(script: 'terraform output -raw asa_vm_public_ip', returnStdout: true).trim()
+                        sh 'echo "VM Public IP: $PUBLIC_IP"'
                     }
                 }
             }
@@ -78,10 +72,10 @@ pipeline {
                 script {
                     sh 'sleep 120'  // 2 mins
                     sh """
-                    echo "Pinging VM at ${env.PUBLIC_IP}"
+                    echo "Pinging VM at $PUBLIC_IP"
                     for i in {1..5}
                     do
-                        ping -c 1 ${env.PUBLIC_IP} && break || sleep 10
+                        ping -c 1 $PUBLIC_IP && break || sleep 10
                     done
                     """
                 }
