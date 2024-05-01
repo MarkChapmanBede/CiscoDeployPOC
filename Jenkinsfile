@@ -1,7 +1,8 @@
 pipeline {
     agent any
     environment {
-        PATH = "${env.PATH}:/usr/local/bin"
+        PATH = "${env.PATH}:/usr/local/bin"  // Assuming Terraform is installed here
+        PUBLIC_IP = ''  // Define PUBLIC_IP at the pipeline level to ensure availability across stages
     }
     stages {
         stage('Initialize') {
@@ -64,8 +65,12 @@ pipeline {
                         sh '''
                         echo "Applying Terraform plan"
                         terraform apply -auto-approve tfplan
-                        PUBLIC_IP=$(terraform output -raw vm_public_ip)
                         '''
+                        sh script: '''
+                        PUBLIC_IP=$(terraform output -raw asa_vm_public_ip)
+                        echo "VM Public IP: $PUBLIC_IP"
+                        ''', returnStdout: true
+                        env.PUBLIC_IP = sh(script: "terraform output -raw asa_vm_public_ip", returnStdout: true).trim()
                     }
                 }
             }
@@ -74,7 +79,7 @@ pipeline {
             steps {
                 script {
                     // Wait for the server to be ready
-                    sh 'sleep 120'  //  2 mins
+                    sh 'sleep 120'  // Wait for 2 minutes
                     sh '''
                     echo "Pinging VM at $PUBLIC_IP"
                     for i in {1..5}
