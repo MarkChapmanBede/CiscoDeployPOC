@@ -18,11 +18,11 @@ pipeline {
                     ]) {
                         sh 'echo "Initializing Terraform"'
                         sh 'terraform init'
-                    } // Closing withCredentials
-                } // Closing script
-            } // Closing steps
-        } // Closing stage 'Initialize'
-        
+                    } // End withCredentials
+                } // End script
+            } // End steps
+        } // End stage 'Initialize'
+
         stage('Plan') {
             steps {
                 script {
@@ -37,16 +37,16 @@ pipeline {
                     ]) {
                         sh 'echo "Generating Terraform plan"'
                         sh 'terraform plan -out=tfplan'
-                    } // Closing withCredentials
-                } // Closing script
-            } // Closing steps
-        } // Closing stage 'Plan'
+                    } // End withCredentials
+                } // End script
+            } // End steps
+        } // End stage 'Plan'
 
         stage('Approval') {
             steps {
                 input(message: "Review the plan and approve if it's okay to proceed", ok: "Deploy")
-            } // Closing steps
-        } // Closing stage 'Approval'
+            } // End steps
+        } // End stage 'Approval'
 
         stage('Apply and Refresh') {
             steps {
@@ -70,11 +70,11 @@ pipeline {
                             env.PUBLIC_IPS = readJSON text: env.PUBLIC_IPS_JSON
                             echo "Debug: IPs - ${env.PUBLIC_IPS}"
                             sh "echo 'VM Public IPs: ${env.PUBLIC_IPS.join(', ')}'"
-                        } // Closing inner script
-                    } // Closing withCredentials
-                } // Closing script
-            } // Closing steps
-        } // Closing stage 'Apply and Refresh'
+                        } // End inner script
+                    } // End withCredentials
+                } // End script
+            } // End steps
+        } // End stage 'Apply and Refresh'
 
         stage('Ping Test') {
             steps {
@@ -89,14 +89,7 @@ pipeline {
                         ping -c 1 $ip || echo "Ping failed for IP $ip"
                         '
                         """
-                    } // Closing each loop
-                } // Closing script
-            } // Closing steps
-        } // Closing stage 'Ping Test'
-    } // Closing stages
-
-    post {
-        always {
-            archiveArtifacts artifacts: '*.tfstate'
-        } // Closing always
-    } // Closing
+                    } // End each loop
+                } // End script
+            } // End steps
+        } // End stage 'Ping Test
