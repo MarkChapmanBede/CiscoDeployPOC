@@ -72,7 +72,7 @@ resource "azurerm_network_interface" "asa_nic" {
     subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index % 4)
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = (count.index % 4 == 2) ? azurerm_public_ip.asa_public_ip_outside.id : null
-    primary                       = (count.index % 4 == 0)  # Make the management interface primary
+    primary                       = (count.index % 4 == 2)  # Set 'outside' interface as primary
   }
 }
 
