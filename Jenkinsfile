@@ -2,7 +2,6 @@ pipeline {
     agent any
     environment {
         PATH = "${env.PATH}:/usr/local/bin"
-        PUBLIC_IP = ''  // Define PUBLIC_IP
     }
     stages {
         stage('Initialize') {
@@ -62,16 +61,14 @@ pipeline {
                         string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID'),
                         string(credentialsId: 'ARM_SUBSCRIPTION_ID', variable: 'ARM_SUBSCRIPTION_ID')
                     ]) {
-                        sh '''
-                        echo "Applying Terraform plan"
+                        PUBLIC_IP = sh(script: """
                         terraform apply -auto-approve tfplan
                         echo "Waiting for 30 seconds before refreshing state to capture Public IP..."
                         sleep 30
                         terraform refresh
-                        PUBLIC_IP=$(terraform output -raw asa_vm_public_ip)
-                        echo "VM Public IP: $PUBLIC_IP"
-                        '''
-                        env.PUBLIC_IP = sh(script: "terraform output -raw asa_vm_public_ip", returnStdout: true).trim()
+                        terraform output -raw asa_vm_public_ip
+                        """, returnStdout: true).trim()
+                        echo "VM Public IP: ${env.PUBLIC_IP}"
                     }
                 }
             }
@@ -79,14 +76,14 @@ pipeline {
         stage('Ping Test') {
             steps {
                 script {
-                    sh 'sleep 120'  // 2 mins
-                    sh '''
-                    echo "Pinging VM at $PUBLIC_IP"
+                    sh 'sleep 120'  // Wait 2 minutes to ensure the VM is fully operational
+                    sh """
+                    echo "Pinging VM at ${env.PUBLIC_IP}"
                     for i in {1..5}
                     do
-                        ping -c 1 $PUBLIC_IP && break || sleep 10
+                        ping -c 1 ${env.PUBLIC_IP} && break || sleep 10
                     done
-                    '''
+                    """
                 }
             }
         }
