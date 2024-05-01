@@ -76,7 +76,7 @@ pipeline {
         stage('Ping Test') {
             steps {
                 script {
-                    sh 'sleep 120'  // Wait 2 minutes to ensure the VM is fully operational
+                    sh 'sleep 120'  // 2 mins
                     sh """
                     echo "Pinging VM at ${env.PUBLIC_IP}"
                     for i in {1..5}
