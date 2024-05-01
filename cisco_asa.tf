@@ -1,8 +1,3 @@
-variable "vm_count" {
-  description = "Number of virtual machines to create."
-  default     = 1
-}
-
 # Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = "Cisco-Test-VPN-TF-Managed"
