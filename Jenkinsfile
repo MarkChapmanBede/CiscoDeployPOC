@@ -67,7 +67,7 @@ pipeline {
                         script {
                             env.PUBLIC_IPS_JSON = sh(script: 'terraform output -json asa_vm_public_ips', returnStdout: true).trim()
                             echo "Debug: JSON Output - ${env.PUBLIC_IPS_JSON}"
-                            env.PUBLIC_IPS = readJSON(text: env.PUBLIC_IPS_JSON)
+                            env.PUBLIC_IPS = env.PUBLIC_IPS_JSON.replaceAll("\\[|\\]|\"", "").split(",")
                             echo "Debug: IPs - ${env.PUBLIC_IPS}"
                         }
                     }
