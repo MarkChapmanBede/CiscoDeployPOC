@@ -72,29 +72,25 @@ pipeline {
                 }
             }
         }
-stage('Ping Test') {
-    steps {
-        script {
-            sh 'sleep 120'  // 2 mins
-            // Debug: Output IPs to ensure they're captured correctly
-            echo "Pinging IPs: ${env.PUBLIC_IPS}"
-            
-            // Iterate over each IP address and perform ping test
-            env.PUBLIC_IPS.each { ip ->
-                echo "About to ping IP: $ip"  // Debug: Check IP before ping
-                sh """
-                bash -c '
-                echo "Pinging VM at $ip"
-                ping -c 1 $ip || echo "Ping failed for IP $ip"
-                '
-                """
+        stage('Ping Test') {
+            steps {
+                script {
+                    sh 'sleep 120'  // 2 mins
+                    // Debug: Output IPs to ensure they're captured correctly
+                    echo "Pinging IPs: ${env.PUBLIC_IPS}"
+                    
+                    // Iterate over each IP address and perform ping test
+                    env.PUBLIC_IPS.each { ip ->
+                        echo "About to ping IP: $ip"  // Debug: Check IP before ping
+                        sh """
+                        bash -c '
+                        echo "Pinging VM at $ip"
+                        ping -c 1 $ip || echo "Ping failed for IP $ip"
+                        '
+                        """
+                    }
+                }
             }
         }
     }
-}
-    post {
-        always {
-            archiveArtifacts artifacts: '*.tfstate'
-        }
-    }
-}
+    post
