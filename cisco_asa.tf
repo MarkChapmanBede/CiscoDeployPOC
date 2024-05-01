@@ -1,3 +1,7 @@
+variable "vm_count" {
+  default = 1
+}
+
 # Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = "Cisco-Test-VPN-TF-Managed"
@@ -41,7 +45,7 @@ resource "azurerm_subnet" "subnet_dmz" {
   address_prefixes     = ["10.0.4.0/24"]
 }
 
-# Public IP for Load Balancer (if using one)
+# Public IP for Load Balancer
 resource "azurerm_public_ip" "asa_public_ip_outside" {
   name                = "asa-public-ip-outside"
   location            = azurerm_resource_group.rg.location
@@ -62,23 +66,23 @@ resource "azurerm_availability_set" "asa_av_set" {
 
 # Network Interfaces
 resource "azurerm_network_interface" "asa_nic" {
-  count               = 4
-  name                = "asa-nic-${element(["mgmt", "inside", "outside", "dmz"], count.index % 4)}-${count.index / 4}"
+  count               = 4 * var.vm_count
+  name                = "asa-nic-${element(["mgmt", "inside", "outside", "dmz"], count.index % 4)}-vm${count.index / 4}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
-    name                          = "${element(["mgmt", "inside", "outside", "dmz"], count.index % 4)}-config-${count.index / 4}"
+    name                          = "ipconfig${count.index}"
     subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index % 4)
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = (count.index % 4 == 2) ? azurerm_public_ip.asa_public_ip_outside.id : null
-    primary                       = (count.index % 4 == 2)  # Set 'outside' interface as primary
+    primary                       = (count.index % 4 == 2)
   }
 }
 
 # Virtual Machines
 resource "azurerm_virtual_machine" "asa_vm" {
-  count                         = 1  # Adjust the count to scale up VM instances
+  count                         = var.vm_count
   name                          = "ciscovpn-${count.index}"
   location                      = azurerm_resource_group.rg.location
   resource_group_name           = azurerm_resource_group.rg.name
