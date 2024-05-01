@@ -17,5 +17,5 @@ variable "ssh_public_key" {
 
 variable "vm_count" {
   description = "Number of virtual machines to create."
-  default     = 1
+  default     = 2
 }
