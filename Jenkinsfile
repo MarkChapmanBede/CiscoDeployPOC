@@ -18,10 +18,11 @@ pipeline {
                     ]) {
                         sh 'echo "Initializing Terraform"'
                         sh 'terraform init'
-                    }
-                }
-            }
-        }
+                    } // Closing withCredentials
+                } // Closing script
+            } // Closing steps
+        } // Closing stage 'Initialize'
+        
         stage('Plan') {
             steps {
                 script {
@@ -36,15 +37,17 @@ pipeline {
                     ]) {
                         sh 'echo "Generating Terraform plan"'
                         sh 'terraform plan -out=tfplan'
-                    }
-                }
-            }
-        }
+                    } // Closing withCredentials
+                } // Closing script
+            } // Closing steps
+        } // Closing stage 'Plan'
+
         stage('Approval') {
             steps {
                 input(message: "Review the plan and approve if it's okay to proceed", ok: "Deploy")
-            }
-        }
+            } // Closing steps
+        } // Closing stage 'Approval'
+
         stage('Apply and Refresh') {
             steps {
                 script {
@@ -67,30 +70,33 @@ pipeline {
                             env.PUBLIC_IPS = readJSON text: env.PUBLIC_IPS_JSON
                             echo "Debug: IPs - ${env.PUBLIC_IPS}"
                             sh "echo 'VM Public IPs: ${env.PUBLIC_IPS.join(', ')}'"
-                        }
-                    }
-                }
-            }
-        }
+                        } // Closing inner script
+                    } // Closing withCredentials
+                } // Closing script
+            } // Closing steps
+        } // Closing stage 'Apply and Refresh'
+
         stage('Ping Test') {
             steps {
                 script {
                     sh 'sleep 120'  // 2 mins
-                    // Debug: Output IPs to ensure they're captured correctly
                     echo "Pinging IPs: ${env.PUBLIC_IPS}"
-                    
-                    // Iterate over each IP address and perform ping test
                     env.PUBLIC_IPS.each { ip ->
-                        echo "About to ping IP: $ip"  // Debug: Check IP before ping
+                        echo "About to ping IP: $ip"
                         sh """
                         bash -c '
                         echo "Pinging VM at $ip"
                         ping -c 1 $ip || echo "Ping failed for IP $ip"
                         '
                         """
-                    }
-                }
-            }
-        }
-    }
-    post
+                    } // Closing each loop
+                } // Closing script
+            } // Closing steps
+        } // Closing stage 'Ping Test'
+    } // Closing stages
+
+    post {
+        always {
+            archiveArtifacts artifacts: '*.tfstate'
+        } // Closing always
+    } // Closing
