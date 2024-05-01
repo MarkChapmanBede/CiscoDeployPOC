@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PATH = "${env.PATH}:/usr/local/bin"
-        PUBLIC_IP = ''  // Define PUBLIC_IP 
+        PUBLIC_IP = ''  // Define PUBLIC_IP at the pipeline level for cross-stage access
     }
     stages {
         stage('Initialize') {
@@ -50,7 +50,7 @@ pipeline {
                 input(message: "Review the plan and approve if it's okay to proceed", ok: "Deploy")
             }
         }
-        stage('Apply') {
+        stage('Apply and Refresh') {
             steps {
                 script {
                     withCredentials([
@@ -65,11 +65,12 @@ pipeline {
                         sh '''
                         echo "Applying Terraform plan"
                         terraform apply -auto-approve tfplan
-                        '''
-                        sh script: '''
+                        echo "Waiting for 30 seconds before refreshing state to capture Public IP..."
+                        sleep 30
+                        terraform refresh
                         PUBLIC_IP=$(terraform output -raw asa_vm_public_ip)
                         echo "VM Public IP: $PUBLIC_IP"
-                        ''', returnStdout: true
+                        '''
                         env.PUBLIC_IP = sh(script: "terraform output -raw asa_vm_public_ip", returnStdout: true).trim()
                     }
                 }
@@ -78,7 +79,7 @@ pipeline {
         stage('Ping Test') {
             steps {
                 script {
-                    sh 'sleep 120'  // 2 mins
+                    sh 'sleep 120'  // Wait 2 minutes to ensure the VM is fully operational
                     sh '''
                     echo "Pinging VM at $PUBLIC_IP"
                     for i in {1..5}
