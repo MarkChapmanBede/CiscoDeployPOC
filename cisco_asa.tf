@@ -41,13 +41,14 @@ resource "azurerm_subnet" "subnet_dmz" {
   address_prefixes     = ["10.0.4.0/24"]
 }
 
-# Public IP for Load Balancer
+# Public IPs for Load Balancer or "outside" NICs
 resource "azurerm_public_ip" "asa_public_ip_outside" {
-  name                = "asa-public-ip-outside"
+  count               = var.vm_count  # Create one public IP per VM
+  name                = "asa-public-ip-outside-${count.index}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
-  domain_name_label   = "ciscovpn-westeu"
+  domain_name_label   = "ciscovpn-westeu-${count.index}"  # Ensure unique DNS label
 }
 
 # Availability Set
@@ -71,8 +72,8 @@ resource "azurerm_network_interface" "asa_nic" {
     name                          = "ipconfig-${count.index}"
     subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index % 4)
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = (count.index % 4 == 2) ? azurerm_public_ip.asa_public_ip_outside.id : null
-    primary                       = (count.index % 4 == 2) # Set primary network interface explicitly
+    public_ip_address_id          = (count.index % 4 == 2) ? azurerm_public_ip.asa_public_ip_outside[floor(count.index / 4)].id : null
+    primary                       = (count.index % 4 == 2) # Set the outside NIC as primary
   }
 }
 
