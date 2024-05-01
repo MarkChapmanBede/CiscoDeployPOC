@@ -1,7 +1,3 @@
-variable "vm_count" {
-  default = 1
-}
-
 # Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = "Cisco-Test-VPN-TF-Managed"
