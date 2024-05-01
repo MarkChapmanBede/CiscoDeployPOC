@@ -65,11 +65,10 @@ pipeline {
                         sh 'echo "Waiting for 30 seconds before refreshing state to capture Public IP..."'
                         sh 'sleep 30'
                         script {
-                            env.PUBLIC_IPS_JSON = sh(script: 'bash -c "terraform output -json asa_vm_public_ips"', returnStdout: true).trim()
+                            env.PUBLIC_IPS_JSON = sh(script: 'terraform output -json asa_vm_public_ips', returnStdout: true).trim()
                             echo "Debug: JSON Output - ${env.PUBLIC_IPS_JSON}"
                             env.PUBLIC_IPS = readJSON text: env.PUBLIC_IPS_JSON
                             echo "Debug: IPs - ${env.PUBLIC_IPS}"
-                            sh "echo 'VM Public IPs: ${env.PUBLIC_IPS.join(', ')}'"
                         }
                     }
                 }
@@ -79,16 +78,11 @@ pipeline {
         stage('Ping Test') {
             steps {
                 script {
-                    sh 'sleep 120'
+                    sh 'sleep 120'  // 2 mins
                     echo "Pinging IPs: ${env.PUBLIC_IPS}"
                     env.PUBLIC_IPS.each { ip ->
                         echo "About to ping IP: $ip"
-                        sh """
-                        bash -c '
-                        echo "Pinging VM at $ip"
-                        ping -c 1 $ip || echo "Ping failed for IP $ip"
-                        '
-                        """
+                        sh "echo 'Pinging VM at $ip' && ping -c 1 $ip || echo 'Ping failed for IP $ip'"
                     }
                 }
             }
