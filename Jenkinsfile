@@ -18,10 +18,10 @@ pipeline {
                     ]) {
                         sh 'echo "Initializing Terraform"'
                         sh 'terraform init'
-                    } // End withCredentials
-                } // End script
-            } // End steps
-        } // End stage 'Initialize'
+                    }
+                }
+            }
+        }
 
         stage('Plan') {
             steps {
@@ -37,16 +37,16 @@ pipeline {
                     ]) {
                         sh 'echo "Generating Terraform plan"'
                         sh 'terraform plan -out=tfplan'
-                    } // End withCredentials
-                } // End script
-            } // End steps
-        } // End stage 'Plan'
+                    }
+                }
+            }
+        }
 
         stage('Approval') {
             steps {
                 input(message: "Review the plan and approve if it's okay to proceed", ok: "Deploy")
-            } // End steps
-        } // End stage 'Approval'
+            }
+        }
 
         stage('Apply and Refresh') {
             steps {
@@ -70,16 +70,16 @@ pipeline {
                             env.PUBLIC_IPS = readJSON text: env.PUBLIC_IPS_JSON
                             echo "Debug: IPs - ${env.PUBLIC_IPS}"
                             sh "echo 'VM Public IPs: ${env.PUBLIC_IPS.join(', ')}'"
-                        } // End inner script
-                    } // End withCredentials
-                } // End script
-            } // End steps
-        } // End stage 'Apply and Refresh'
+                        }
+                    }
+                }
+            }
+        }
 
         stage('Ping Test') {
             steps {
                 script {
-                    sh 'sleep 120'  // 2 mins
+                    sh 'sleep 120'
                     echo "Pinging IPs: ${env.PUBLIC_IPS}"
                     env.PUBLIC_IPS.each { ip ->
                         echo "About to ping IP: $ip"
@@ -89,7 +89,9 @@ pipeline {
                         ping -c 1 $ip || echo "Ping failed for IP $ip"
                         '
                         """
-                    } // End each loop
-                } // End script
-            } // End steps
-        } // End stage 'Ping Test'
+                    }
+                }
+            }
+        }
+    }
+}
