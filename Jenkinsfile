@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PATH = "${env.PATH}:/usr/local/bin"
-        PUBLIC_IP = ''  // Define PUBLIC_IP at the pipeline level for cross-stage access
+        PUBLIC_IP = ''  // Define PUBLIC_IP
     }
     stages {
         stage('Initialize') {
@@ -79,7 +79,7 @@ pipeline {
         stage('Ping Test') {
             steps {
                 script {
-                    sh 'sleep 120'  // Wait 2 minutes to ensure the VM is fully operational
+                    sh 'sleep 120'  // 2 mins
                     sh '''
                     echo "Pinging VM at $PUBLIC_IP"
                     for i in {1..5}
