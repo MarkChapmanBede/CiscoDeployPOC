@@ -63,8 +63,10 @@ pipeline {
                         sh 'sleep 30'
                         script {
                             env.PUBLIC_IPS_JSON = sh(script: 'bash -c "terraform output -json asa_vm_public_ips"', returnStdout: true).trim()
+                            echo "Debug: JSON Output - ${env.PUBLIC_IPS_JSON}"
                             env.PUBLIC_IPS = readJSON text: env.PUBLIC_IPS_JSON
-                            sh 'echo "VM Public IPs: ${env.PUBLIC_IPS.join(\', \')}"'
+                            echo "Debug: IPs - ${env.PUBLIC_IPS}"
+                            sh "echo 'VM Public IPs: ${env.PUBLIC_IPS.join(', ')}'"
                         }
                     }
                 }
@@ -89,9 +91,3 @@ pipeline {
             }
         }
     }
-    post {
-        always {
-            archiveArtifacts artifacts: '*.tfstate'
-        }
-    }
-}
