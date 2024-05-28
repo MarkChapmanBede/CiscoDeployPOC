@@ -41,7 +41,7 @@ resource "azurerm_subnet" "subnet_dmz" {
   address_prefixes     = ["10.0.4.0/24"]
 }
 
-# Public IPs for Load Balancer or "outside" NICs
+# Public IP for Load Balancer or "outside" NICs
 resource "azurerm_public_ip" "asa_public_ip_outside" {
   count               = var.vm_count  # Create one public IP per VM
   name                = "asa-public-ip-outside-${count.index}"
@@ -72,7 +72,7 @@ resource "azurerm_network_interface" "asa_nic" {
     name                          = "ipconfig-${count.index}"
     subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index % 4)
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = (count.index % 4 == 2) ? azurerm_public_ip.asa_public_ip_outside[floor(count.index / 4)].id : null
+    public_ip_address_id          = (count.index % 4 == 2) ? element(azurerm_public_ip.asa_public_ip_outside.*.id, floor(count.index / 4)) : null
     primary                       = (count.index % 4 == 2) # Set the outside NIC as primary
   }
 }
@@ -100,12 +100,6 @@ resource "azurerm_virtual_machine" "asa_vm" {
     offer     = "cisco-asav"
     sku       = "asav-azure-byol"
     version   = "latest"
-  }
-
-  plan {
-    name      = "asav-azure-byol"
-    publisher = "cisco"
-    product   = "cisco-asav"
   }
 
   os_profile {
