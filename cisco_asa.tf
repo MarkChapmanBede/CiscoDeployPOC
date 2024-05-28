@@ -63,7 +63,7 @@ resource "azurerm_availability_set" "asa_av_set" {
 
 # Network Interfaces
 resource "azurerm_network_interface" "asa_nic" {
-  count               = var.vm_count * 4 # Four NICs per VM
+  count               = var.vm_count * 4  # Four NICs per VM
   name                = "asa-nic-${element(["mgmt", "inside", "outside", "dmz"], count.index % 4)}-vm${floor(count.index / 4)}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -73,7 +73,7 @@ resource "azurerm_network_interface" "asa_nic" {
     subnet_id                     = element([azurerm_subnet.subnet_mgmt.id, azurerm_subnet.subnet_inside.id, azurerm_subnet.subnet_outside.id, azurerm_subnet.subnet_dmz.id], count.index % 4)
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = (count.index % 4 == 2) ? element(azurerm_public_ip.asa_public_ip_outside.*.id, floor(count.index / 4)) : null
-    primary                       = (count.index % 4 == 2) # Set the outside NIC as primary
+    primary                       = count.index % 4 == 2  # Set the outside NIC as primary
   }
 }
 
