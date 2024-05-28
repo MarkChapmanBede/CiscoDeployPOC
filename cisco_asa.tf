@@ -84,7 +84,7 @@ resource "azurerm_virtual_machine" "asa_vm" {
   location                      = azurerm_resource_group.rg.location
   resource_group_name           = azurerm_resource_group.rg.name
   availability_set_id           = azurerm_availability_set.asa_av_set.id
-  network_interface_ids         = [element(azurerm_network_interface.asa_nic.*.id, count.index * 4 + 2)] # Explicitly using the outside NIC as primary
+  network_interface_ids         = slice(azurerm_network_interface.asa_nic.*.id, count.index * 4, count.index * 4 + 4)
   vm_size                       = "Standard_A4_v2"
   delete_os_disk_on_termination = true
 
